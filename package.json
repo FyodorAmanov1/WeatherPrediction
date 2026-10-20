@@ -1,0 +1,1 @@
+{"name":"atmos-weather-observatory","private":true,"type":"module","scripts":{"check":"node scripts/check-model.mjs","preview":"python -m http.server 8765 --directory docs"}}
