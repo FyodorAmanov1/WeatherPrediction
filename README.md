@@ -1,46 +1,62 @@
-# Atmos — a weather observatory and numerical forecasting lab
+# Atmos · WeatherPrediction
 
-**[Open the live application](https://fyodoramanov1.github.io/WeatherPrediction/)** · [Original numerical-methods notebook](ProjectNumMeth1.ipynb)
+**Explore the weather now, then investigate how a small mathematical model explains a daily temperature curve.**
 
-Atmos develops the original Meteostat/Astral temperature-model notebook into a responsive application with live global weather, an interpretable numerical model, and a reproducible hindcast comparison.
+Atmos brings a global weather dashboard and an interactive numerical-methods laboratory into one browser application. It connects the original weather-modeling notebook to a visual interface where forecasts, model assumptions and evaluation results can be explored directly.
 
-## Use it
+[Launch Atmos](https://fyodoramanov1.github.io/WeatherPrediction/) · [Original notebook](ProjectNumMeth1.ipynb) · [Temperature model](docs/model.mjs)
 
-- Search cities worldwide or request your browser's location.
-- Explore current conditions, the next 24 hours, a seven-day outlook, wind, rain probability, UV and daylight.
-- Switch between Celsius and Fahrenheit and between temperature, wind and precipitation charts.
-- Open **Forecast lab** to fit or adjust thermal relaxation, previous-day memory and solar forcing. Export the experiment as JSON.
-- If the weather service is unavailable, explicitly load the dated Oxford snapshot. It is labelled as saved data, never presented as a current forecast.
+## Explore the dashboard
 
-## The numerical model
+- Search for cities worldwide or request your current location with the location button.
+- Inspect current temperature, apparent temperature, humidity, wind, precipitation and UV.
+- Follow the next 24 hours through temperature, rain and wind charts.
+- Browse seven-day forecast cards and a sunrise-to-sunset solar arc.
+- Switch between Celsius and Fahrenheit.
+- Explore the explicitly dated Oxford snapshot when using the saved-data mode.
 
-Time is measured in hours and temperature in Celsius:
+Live forecasts and city search use Open-Meteo. They are provider forecasts, separate from the project's own experimental temperature model.
 
-    dT/dt = alpha (seasonal_target(t) - T)
-          + memory (previous_day(t) - T)
-          + beta max(0, sin(pi (t - sunrise) / daylight))
+## Inside the model laboratory
 
-The solar term is active only during daylight. A fourth-order Runge–Kutta solver integrates at five-minute steps, correctly evaluating intermediate states and initializing the first state. A previous-day mean and amplitude provide a local climatology proxy; the target peaks at 14:00 local time. This is an interpretable prototype, not a full atmospheric model.
+The model treats temperature as a balance between relaxation toward a daily target, previous-day memory and a daylight-dependent solar contribution:
 
-Three earlier days are requested. Parameters are selected by RMSE on the first-to-second day transition; the third day is held out. A 24-hour persistence baseline repeats the preceding day. The lab reports MAE, RMSE and skill relative to persistence, retaining negative skill when it occurs. User changes after viewing hold-out scores are exploratory tuning.
+```text
+dT/dt = α (T_target(t) − T) + m (T_previous(t) − T) + β solar(t)
+```
 
-Historical reference values come from Open-Meteo's past weather-model data, **not independent station observations**. Scores do not establish operational forecasting accuracy. The overview displays the provider's numerical weather forecasts; it does not relabel them as predictions from the RK4 model.
+A fourth-order Runge–Kutta solver integrates this equation in five-minute steps, using hours and degrees Celsius consistently. The daily target has a cosine shape with a local-afternoon peak; the solar term is active only between sunrise and sunset.
 
-## Local development
+Sliders expose the model parameters so that a change in an assumption produces a visible change in the trajectory. The notebook preserves the earlier Python work with weather data and solar geometry; [docs/model.mjs](docs/model.mjs) implements the browser solver.
 
-No build step or JavaScript packages are required. With Python and Node.js installed:
+## How the model is evaluated
 
-    python -m http.server 8765 --directory docs
-    node scripts/check-model.mjs
+An earlier day-to-day transition supplies the fitting window, and a later day is held out for evaluation. The laboratory compares the resulting temperature curve with a prior-day persistence baseline using MAE, RMSE and skill relative to persistence.
 
-Visit `http://localhost:8765`. Solver checks compare against analytic exponential decay, a constant equilibrium, and hand-calculated error scores. The GitHub Actions workflow validates the modules and publishes `docs/` to Pages. All asset URLs are relative, so the application works under a repository subpath.
+The reference series comes from Open-Meteo's modeled weather data rather than an independent station-validation campaign. Adjusting sliders after looking at the held-out curve is exploratory analysis. The small ODE is a learning and interpretation tool, not a replacement for a numerical weather prediction system.
 
-## Original work and fixes
+## Run locally
 
-The original `ProjectNumMeth1.ipynb` remains intact. The app preserves its thermal-memory/solar-forcing idea while correcting uninitialized RK4 states, half-step handling, hour/minute inconsistencies and manual calendar arithmetic. It removes interactive notebook setup and the undefined region/timezone variables from the browser workflow. The original notebook is retained as project history; use the new solver for the corrected model.
+The application uses native browser modules, HTML, CSS and SVG. No JavaScript build step is needed.
 
-## Data and attribution
+```bash
+git clone https://github.com/FyodorAmanov1/WeatherPrediction.git
+cd WeatherPrediction
+python -m http.server 8000 --directory docs
+```
 
-Live forecast: [Open-Meteo Forecast API](https://open-meteo.com/en/docs). City search: [Open-Meteo Geocoding API](https://open-meteo.com/en/docs/geocoding-api), based on GeoNames. Weather data are provided under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); provider API usage terms apply separately. This personal portfolio uses the non-commercial public endpoints and does not embed credentials. The saved Oxford response records its actual retrieval timestamp in `docs/data/oxford.json`.
+Open <http://localhost:8000>. Serve the site over HTTP rather than opening `index.html` directly, so its modules and data requests work correctly. Live mode needs internet access.
 
-Created by Fyodor Amanov. The original notebook and the new application have separate, clearly described model boundaries.
+## Repository guide
+
+| File | Purpose |
+|---|---|
+| [docs/index.html](docs/index.html) | Weather dashboard and laboratory interface |
+| [docs/app.js](docs/app.js) | Data fetching, interaction and visualization |
+| [docs/model.mjs](docs/model.mjs) | ODE, RK4 integration and evaluation helpers |
+| [docs/data/oxford.json](docs/data/oxford.json) | Dated saved weather example |
+| [ProjectNumMeth1.ipynb](ProjectNumMeth1.ipynb) | Original numerical-methods study |
+
+## Data and license
+
+Weather data: [Open-Meteo](https://open-meteo.com/). Location data: GeoNames through Open-Meteo geocoding. Preserve the providers' CC BY 4.0 attribution when reusing their data. Application code is available under the [MIT license](LICENSE).
